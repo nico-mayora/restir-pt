@@ -17,7 +17,8 @@ embed_ptx(
 )
 
 set(sources
-        src/main.cu
+        src/main.cpp
+        src/loader/mitsuba3.cpp
 )
 
 add_executable(pathTracer ${sources})
