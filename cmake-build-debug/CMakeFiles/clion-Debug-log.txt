@@ -1,10 +1,6 @@
 C:\Users\Nico\AppData\Local\Programs\CLion\bin\cmake\win\x64\bin\cmake.exe -DCMAKE_BUILD_TYPE=Debug -DCMAKE_MAKE_PROGRAM=C:/Users/Nico/AppData/Local/Programs/CLion/bin/ninja/win/x64/ninja.exe -G Ninja -S C:\Users\Nico\CLionProjects\ReSTIR -B C:\Users\Nico\CLionProjects\ReSTIR\cmake-build-debug
--- The CUDA compiler identification is NVIDIA 12.6.20
--- Detecting CUDA compiler ABI info
--- Detecting CUDA compiler ABI info - done
--- Check for working CUDA compiler: C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.6/bin/nvcc.exe - skipped
--- Detecting CUDA compile features
--- Detecting CUDA compile features - done
--- Configuring done (9.7s)
--- Generating done (0.0s)
+-- Detected the OptiX_INSTALL_DIR env variable (pointing to C:\ProgramData\NVIDIA Corporation\OptiX SDK 8.0.0; going to use this for finding optix.h
+OptiX found all right.
+-- Configuring done (0.9s)
+-- Generating done (0.1s)
 -- Build files have been written to: C:/Users/Nico/CLionProjects/ReSTIR/cmake-build-debug
