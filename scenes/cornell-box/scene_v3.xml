@@ -18,7 +18,7 @@
 		<film type="hdrfilm">
 			<integer name="width" value="$resx" />
 			<integer name="height" value="$resy" />
-			<string name="file_format" value="openexr" />
+			<string name="file_format" value="png" />
 			<string name="pixel_format" value="rgb" />
 			<rfilter type="tent" />
 		</film>
