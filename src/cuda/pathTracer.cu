@@ -9,23 +9,34 @@ OPTIX_RAYGEN_PROGRAM(ptRayGen)()  {
     const RayGenData &self = owl::getProgramData<RayGenData>();
     const owl::vec2i pixelID = owl::getLaunchIndex();
 
-    const owl::vec2f screen = (owl::vec2f(pixelID)+owl::vec2f(.5f)) / owl::vec2f(self.resolution);
-    owl::Ray ray;
-    ray.origin = self.camera.pos;
-    ray.direction
-      = normalize(self.camera.dir_00
-                  + screen.u * self.camera.dir_du
-                  + screen.v * self.camera.dir_dv);
-    if (pixelID == owl::vec2i(600, 400)) {
-        printf("----------\npixelID: %d %d\n", pixelID.x, pixelID.y);
-        printf("ray org: %f %f %f, ray dir: %f %f %f\n----------\n", ray.origin.x, ray.origin.y, ray.origin.z, ray.direction.x, ray.direction.y, ray.direction.z);
+    PerRayData prd;
+    prd.random.init(pixelID.x,pixelID.y);
+    owl::vec3f colour = 0.f;
+
+    for (int sampleID=0; sampleID < self.samples; sampleID++) {
+        owl::Ray ray;
+
+        const owl::vec2f pixelSample(prd.random(),prd.random());
+        const owl::vec2f screen
+          = (owl::vec2f(pixelID)+pixelSample)
+          / owl::vec2f(self.resolution);
+        const owl::vec3f origin = self.camera.pos;
+        const owl::vec3f direction
+            = normalize(self.camera.dir_00
+                + screen.u * self.camera.dir_du
+                + screen.v * self.camera.dir_dv);
+
+        ray.origin = origin;
+        ray.direction = direction;
+        traceRay(self.world, ray, prd);
+
+        colour += prd.colour;
     }
 
-    owl::vec3f color;
-    traceRay(self.world, ray, color);
+    colour = colour * (1.f / self.samples);
 
     const int fbOfs = pixelID.x+self.resolution.x*pixelID.y;
-    self.fbPtr[fbOfs] = owl::make_rgba(color);
+    self.fbPtr[fbOfs] = owl::make_rgba(colour);
 }
 
 
@@ -34,13 +45,16 @@ OPTIX_MISS_PROGRAM(miss)()
     const owl::vec2i pixelID = owl::getLaunchIndex();
     const MissProgData &self = owl::getProgramData<MissProgData>();
 
-    owl::vec3f &prd = owl::getPRD<owl::vec3f>();
-    prd = self.sky_colour;
+    auto &prd = owl::getPRD<PerRayData>();
+
+    owl::vec3f rayDir = optixGetWorldRayDirection();
+    rayDir = normalize(rayDir);
+    prd.colour = self.sky_colour * (rayDir.y * .5f + 1.f);
 }
 
 OPTIX_CLOSEST_HIT_PROGRAM(TriangleMesh)()
 {
-    owl::vec3f &prd = owl::getPRD<owl::vec3f>();
+    auto &prd = owl::getPRD<PerRayData>();
 
     const TrianglesGeomData &self = owl::getProgramData<TrianglesGeomData>();
     const auto colour = self.material->albedo;
@@ -48,14 +62,6 @@ OPTIX_CLOSEST_HIT_PROGRAM(TriangleMesh)()
     const owl::vec3f Ng = normalize(self.normal[primID]);
 
     const owl::vec3f rayDir = optixGetWorldRayDirection();
-    const owl::vec3f rayOrg = optixGetWorldRayOrigin();
-    const auto tmax = optixGetRayTmax();
-    const owl::vec3f hitpoint = rayOrg + tmax * rayDir;
-    if (abs(hitpoint.x - 1.f) < 0.1) {
-        prd = owl::vec3f(1.f, 0.f, 0.f);
-        return;
-    }
 
-
-    prd = (.2f + .8f*fabs(dot(rayDir,Ng)))*colour;
+    prd.colour = (.2f + .8f*fabs(dot(rayDir,Ng))) * colour;
 }

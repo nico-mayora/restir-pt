@@ -83,17 +83,16 @@ Viewer::Viewer(const World *world) {
 
     OWLVarDecl rayGenVars[] = {
         { "fbPtr",         OWL_RAW_POINTER, OWL_OFFSETOF(RayGenData,fbPtr)},
-        { "depth", OWL_FLOAT3, OWL_OFFSETOF(RayGenData,depth)},
-        { "samples", OWL_FLOAT3, OWL_OFFSETOF(RayGenData,samples)},
+        { "depth", OWL_INT, OWL_OFFSETOF(RayGenData,depth)},
+        { "samples", OWL_INT, OWL_OFFSETOF(RayGenData,samples)},
         { "resolution", OWL_INT2, OWL_OFFSETOF(RayGenData,resolution)},
-        { "fov", OWL_FLOAT3, OWL_OFFSETOF(RayGenData,fov)},
         { "world",         OWL_GROUP,  OWL_OFFSETOF(RayGenData,world)},
         { "camera.pos",    OWL_FLOAT3, OWL_OFFSETOF(RayGenData,camera.pos)},
         { "camera.dir_00", OWL_FLOAT3, OWL_OFFSETOF(RayGenData,camera.dir_00)},
         { "camera.dir_dv", OWL_FLOAT3, OWL_OFFSETOF(RayGenData,camera.dir_dv)},
         { "camera.dir_du", OWL_FLOAT3, OWL_OFFSETOF(RayGenData,camera.dir_du)},
         { "lightSource.centre", OWL_FLOAT3, OWL_OFFSETOF(RayGenData,lightSource.centre)},
-        { "lightSource.sides", OWL_FLOAT3, OWL_OFFSETOF(RayGenData,lightSource.sides)},
+        { "lightSource.sides", OWL_FLOAT2, OWL_OFFSETOF(RayGenData,lightSource.sides)},
         { /* sentinel to mark end of list */ }
     };
 
@@ -105,8 +104,13 @@ Viewer::Viewer(const World *world) {
     camera.setOrientation(world->cam->lookFrom,
                           world->cam->lookAt,
                           world->cam->up,
-                          world->cam->image.fov,
-                          false);
+                          world->cam->image.fov);
+
+    // Set RayGen constant attributes
+    owlRayGenSet1i(rayGen,"samples", world->cam->image.samples);
+    owlRayGenSet1i(rayGen, "depth", world->cam->image.depth);
+    owlRayGenSet2i(rayGen, "resolution", reinterpret_cast<const owl2i&>(world->cam->image.resolution));
+    setWindowSize(world->cam->image.resolution);
 
     owlBuildPrograms(context);
     owlBuildPipeline(context);
@@ -133,6 +137,7 @@ void Viewer::cameraChanged()
     const owl::vec3f lookFrom = camera.getFrom();
     const owl::vec3f lookAt = camera.getAt();
     const owl::vec3f lookUp = camera.getUp();
+
     const float cosFovy = camera.getCosFovy();
     // ----------- compute variable values  ------------------
     owl::vec3f camera_pos = lookFrom;

@@ -1,5 +1,6 @@
 #pragma once
 #include "owl/APIHandle.h"
+#include "owl/include/owl/common/math/random.h"
 
 enum RayTypes {
     PRIMARY,
@@ -24,29 +25,33 @@ struct TrianglesGeomData {
     bool faceted;
 };
 
-struct DeviceCamera {
-    owl::vec3f pos;
-    owl::vec3f dir_00;
-    owl::vec3f dir_dv;
-    owl::vec3f dir_du;
-};
-
 struct MissProgData {
     owl::vec3f sky_colour;
 };
 
 struct RayGenData {
     uint32_t *fbPtr;
+    owl::vec2i resolution;
     OptixTraversableHandle world;
     int depth;
     int samples;
-    owl::vec2i resolution;
-    float fov;
 
     struct { // we'll just support one light in the xy plane to begin with.
         owl::vec3f centre;
         owl::vec2f sides;
     } lightSource;
 
-    DeviceCamera camera;
+    struct {
+        owl::vec3f pos;
+        owl::vec3f dir_00;
+        owl::vec3f dir_dv;
+        owl::vec3f dir_du;
+    } camera;
+};
+
+typedef owl::LCG<> Random;
+
+struct PerRayData {
+    Random random;
+    owl::vec3f colour;
 };

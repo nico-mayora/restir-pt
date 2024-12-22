@@ -3,6 +3,12 @@
 #include "viewer.h"
 #include "loader/mitsuba3.h"
 
+
+const owl::vec3f init_lookFrom(-4.f,+3.f,-2.f);
+const owl::vec3f init_lookAt(0.f,0.f,0.f);
+const owl::vec3f init_lookUp(0.f,1.f,0.f);
+const float init_cosFovy = 0.66f;
+
 int main()
 {
     // TODO: pass scene name as argv
@@ -17,6 +23,10 @@ int main()
     std::cout << "vertex count: " << db_model->mesh->vertices.size() << '\n';
 
     Viewer viewer(world);
+    // viewer.camera.setOrientation(init_lookFrom,
+    //                          init_lookAt,
+    //                          init_lookUp,
+    //                          owl::viewer::toDegrees(acosf(init_cosFovy)));
 
     viewer.enableFlyMode();
 
