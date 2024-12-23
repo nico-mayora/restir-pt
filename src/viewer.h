@@ -11,6 +11,6 @@ struct Viewer : owl::viewer::OWLViewer {
     void cameraChanged() override;
 
     bool sbtDirty = true;
-    OWLRayGen rayGen   { 0 };
-    OWLContext context { 0 };
+    OWLRayGen rayGen   { nullptr };
+    OWLContext context { nullptr };
 };

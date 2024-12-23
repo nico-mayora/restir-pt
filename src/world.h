@@ -78,7 +78,8 @@ struct Camera {
 
     struct {
         int depth;
-        int samples;
+        int pixel_samples;
+        int light_samples;
         owl::vec2i resolution;
         float fov;
     } image;

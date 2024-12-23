@@ -1,4 +1,5 @@
 #include "viewer.h"
+
 #include "world.h"
 #include "cuda/pathTracer.h"
 
@@ -6,6 +7,7 @@ extern "C" char pathTracer_ptx[];
 
 Viewer::Viewer(const World *world) {
     context = owlContextCreate(nullptr, 1);
+    owlContextSetRayTypeCount(context, RAY_TYPES_COUNT);
     OWLModule module = owlModuleCreate(context, pathTracer_ptx);
 
     OWLVarDecl triangles_geom_vars[] = {
@@ -24,6 +26,8 @@ Viewer::Viewer(const World *world) {
                           triangles_geom_vars,-1);
     owlGeomTypeSetClosestHit(triangles_geom_type,PRIMARY,
                              module,"TriangleMesh");
+    owlGeomTypeSetClosestHit(triangles_geom_type,SHADOW,
+                             module,"shadow");
 
     std::cout << "Building geometries...\n";
 
@@ -68,8 +72,6 @@ Viewer::Viewer(const World *world) {
     owlInstanceGroupSetChild(owl_world,0,triangles_group);
     owlGroupBuildAccel(owl_world);
 
-    // TODO: Load lights
-
     // Miss program
     OWLVarDecl missProgVars[] =
     {
@@ -81,10 +83,13 @@ Viewer::Viewer(const World *world) {
                           missProgVars,-1);
     owlMissProgSet3f(missProg,"sky_colour",owl3f{.1f,.3f,.5f});
 
+    owlMissProgCreate(context,module,"shadow",0,nullptr,-1);
+
     OWLVarDecl rayGenVars[] = {
         { "fbPtr",         OWL_RAW_POINTER, OWL_OFFSETOF(RayGenData,fbPtr)},
         { "depth", OWL_INT, OWL_OFFSETOF(RayGenData,depth)},
-        { "samples", OWL_INT, OWL_OFFSETOF(RayGenData,samples)},
+        { "pixel_samples", OWL_INT, OWL_OFFSETOF(RayGenData,pixel_samples)},
+        { "light_samples", OWL_INT, OWL_OFFSETOF(RayGenData,light_samples)},
         { "resolution", OWL_INT2, OWL_OFFSETOF(RayGenData,resolution)},
         { "world",         OWL_GROUP,  OWL_OFFSETOF(RayGenData,world)},
         { "camera.pos",    OWL_FLOAT3, OWL_OFFSETOF(RayGenData,camera.pos)},
@@ -93,6 +98,7 @@ Viewer::Viewer(const World *world) {
         { "camera.dir_du", OWL_FLOAT3, OWL_OFFSETOF(RayGenData,camera.dir_du)},
         { "lightSource.centre", OWL_FLOAT3, OWL_OFFSETOF(RayGenData,lightSource.centre)},
         { "lightSource.sides", OWL_FLOAT2, OWL_OFFSETOF(RayGenData,lightSource.sides)},
+        { "lightSource.radiance", OWL_FLOAT3, OWL_OFFSETOF(RayGenData,lightSource.radiance)},
         { /* sentinel to mark end of list */ }
     };
 
@@ -107,10 +113,44 @@ Viewer::Viewer(const World *world) {
                           world->cam->image.fov);
 
     // Set RayGen constant attributes
-    owlRayGenSet1i(rayGen,"samples", world->cam->image.samples);
+    owlRayGenSet1i(rayGen, "pixel_samples", world->cam->image.pixel_samples);
+    owlRayGenSet1i(rayGen, "light_samples", world->cam->image.light_samples);
     owlRayGenSet1i(rayGen, "depth", world->cam->image.depth);
     owlRayGenSet2i(rayGen, "resolution", reinterpret_cast<const owl2i&>(world->cam->image.resolution));
     setWindowSize(world->cam->image.resolution);
+
+    // TEMP: Set light source -- In the future, we'll have an arbitrary number of them :)
+    const auto light_source = world->light_sources.at(0);
+    owl::vec3f ls_centre = 0.f;
+    owl::vec2f max_values = -INFINITY;
+    owl::vec2f min_values = INFINITY;
+    int i = 0;
+    for (const auto &v : light_source->mesh->vertices) {
+        // Centre
+        ls_centre += v;
+        ++i;
+        std::cout << "vertex_id: " << i << "vertex: " << v.x << " " << v.y << " " << v.z << '\n';
+        // Bounds (y stands in for z; we know the light's height.)
+        if (v.x > max_values.x)
+            max_values.x = v.x;
+        if (v.z > max_values.y)
+            max_values.y = v.z;
+        if (v.x < min_values.x)
+            min_values.x = v.x;
+        if (v.z < min_values.y)
+            min_values.y = v.z;
+    }
+    ls_centre /= static_cast<float>(i);
+    const owl::vec2f sides = abs(max_values - min_values);
+
+    owlRayGenSet3f(rayGen, "lightSource.centre", reinterpret_cast<const owl3f&>(ls_centre));
+    owlRayGenSet2f(rayGen, "lightSource.sides", reinterpret_cast<const owl2f&>(sides));
+    owlRayGenSet3f(rayGen, "lightSource.radiance", reinterpret_cast<const owl3f&>(light_source->radiance));
+
+    std::cout << "centre: " << ls_centre.x << " " << ls_centre.y << " " << ls_centre.z << '\n';
+    std::cout << "sides: " << sides.x << " " << sides.y << '\n';
+    std::cout << "radiance: " << light_source->radiance.x << " " << light_source->radiance.y << " " << light_source->radiance.z << '\n';
+
 
     owlBuildPrograms(context);
     owlBuildPipeline(context);

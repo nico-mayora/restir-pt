@@ -1,5 +1,6 @@
 <scene version="3.0.0">
 	<default name="integrator" value="path" />
+	<default name="lsp" value="12" />
 	<default name="spp" value="32" />
 	<default name="resx" value="800" />
 	<default name="resy" value="800" />
@@ -14,6 +15,7 @@
 		</transform>
 		<sampler type="independent">
 			<integer name="sample_count" value="$spp" />
+			<integer name="light_samples" value="$lsp" />
 		</sampler>
 		<film type="hdrfilm">
 			<integer name="width" value="$resx" />

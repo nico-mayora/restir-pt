@@ -117,7 +117,11 @@ void Mitsuba3Loader::loadSensor(const tinyxml2::XMLElement *sensor) {
         if (elem_name == "sampler") {
             auto child = elem->FirstChildElement("integer");
             assert(!strcmp(child->Attribute("name"), "sample_count"));
-            world->cam->image.samples = resolveValue<int>(child->Attribute("value"));
+            world->cam->image.pixel_samples = resolveValue<int>(child->Attribute("value"));
+
+            auto sibling = child->NextSiblingElement("integer");
+            assert(!strcmp(sibling->Attribute("name"), "light_samples"));
+            world->cam->image.light_samples = resolveValue<int>(sibling->Attribute("value"));
             continue;
         }
 
